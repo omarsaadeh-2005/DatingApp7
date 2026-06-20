@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { CanDeactivate, RouterStateSnapshot, UrlTree } from '@angular/router';
+import { CanDeactivate } from '@angular/router';
 import { MemberEditComponent } from '../members/member-edit/member-edit.component';
 
 @Injectable({

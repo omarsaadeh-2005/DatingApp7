@@ -20,7 +20,7 @@ const routes: Routes = [
     children:[
   {path: 'members', component: MemberListComponent},
   {path: 'members/:username', component: MemberDetailComponent},
-  {path: 'member/:edit', component: MemberEditComponent, canDeactivate: [PreventUnsavedChangesGuard]},
+  {path: 'member/edit', component: MemberEditComponent, canDeactivate: [PreventUnsavedChangesGuard]},
   {path: 'lists', component: ListsComponent},
   {path: 'messages', component: MessagesComponent},
     ]

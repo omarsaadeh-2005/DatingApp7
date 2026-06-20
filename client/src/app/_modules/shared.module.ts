@@ -14,6 +14,9 @@ import { NgxSpinnerModule } from 'ngx-spinner';
     ToastrModule.forRoot({
       positionClass:'toast-bottom-right'
     }),
+    NgxSpinnerModule.forRoot({
+      type: 'line-scale-party'
+    })
   ],
   exports:[
     BsDropdownModule,
