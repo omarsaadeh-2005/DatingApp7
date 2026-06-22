@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, ViewEncapsulation } from '@angular/core';
 import { Member } from 'src/app/_models/member';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-member-card',
@@ -9,6 +10,7 @@ import { Member } from 'src/app/_models/member';
 })
 export class MemberCardComponent implements OnInit {
   @Input() member: Member | undefined;
+  imageUrl = environment.imageUrl;
 
   constructor() { }
 

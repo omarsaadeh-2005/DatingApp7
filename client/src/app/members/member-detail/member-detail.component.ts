@@ -3,6 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Member } from 'src/app/_models/member';
 import { MembersService } from 'src/app/_services/members.service';
 import { GalleryItem, ImageItem } from '@ngx-gallery/core';
+import { environment } from 'src/environments/environment';
 
 
 @Component({
@@ -13,6 +14,7 @@ import { GalleryItem, ImageItem } from '@ngx-gallery/core';
 export class MemberDetailComponent implements OnInit {
   member: Member | undefined;
   galleryImages: any[]=[];
+  imageUrl = environment.imageUrl;
 
   constructor(private memberService: MembersService, private route: ActivatedRoute) { }
 
@@ -21,13 +23,18 @@ export class MemberDetailComponent implements OnInit {
   }
 
   getImages(): GalleryItem[] {
-  if (!this.member || !this.member.photos) return [];
+   if (!this.member || !this.member.photos) return [];
 
   return this.member.photos.map(photo => {
-    return new ImageItem({
-      src: photo.url,
-      thumb: photo.url
-    });
+    let src: string;
+    if (photo.url.startsWith('https')) {
+      src = photo.url;                          // full external URL
+    } else if (photo.url.startsWith('/')) {
+      src = 'https://localhost:5001' + photo.url; // /images/filename.png
+    } else {
+      src = 'https://localhost:5001/' + photo.url; // images/filename.png
+    }
+    return new ImageItem({ src, thumb: src });
   });
 }
 
