@@ -3,6 +3,8 @@ import { AccountService } from '../_services/account.service';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { environment } from 'src/environments/environment';
+import { MembersService } from '../_services/members.service';
+import { UserParams } from '../_models/userParams';
 
 @Component({
   selector: 'app-nav',
