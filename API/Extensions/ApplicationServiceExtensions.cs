@@ -1,4 +1,5 @@
 using API.Data;
+using API.Helpers;
 using API.Interfaces;
 using API.Services;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,7 @@ namespace API.Extensions
         services.AddScoped<IUserRepository,UserRepository>();
         services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
         services.AddScoped<IPhotoService,PhotoService>();
+        services.AddScoped<LogUserActivity>();
         
         return services;
         }
