@@ -1,0 +1,111 @@
+<div class="row" *ngIf="member">
+    <div class="col-4">
+        <h1>Your Profile</h1>
+    </div>
+    <div class="col-8">
+        <div class="alert alert-info pb-0" *ngIf="editForm.dirty">
+            <p><strong>Information: </strong>You have made changes. Any unsaved changes will be lost</p>
+        </div>
+    </div>
+    
+    <!-- Left Sidebar Profile Card -->
+    <div class="col-4">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <img src="{{!member.photoUrl ? './assets/user.png' : member.photoUrl.startsWith('http') ? member.photoUrl : imageUrl + '/'+ member.photoUrl}}" 
+                 alt="{{member.knownAs}}"
+                 class="card-img-top img-thumbnail border-0 p-0"
+                 style="object-fit: contain; width: 100%; max-height: 380px; background-color: #f8fafc;">
+            
+            <div class="card-body p-3">
+                <div class="mb-2">
+                    <strong>Location:</strong>
+                    <p class="mb-0">{{member.city}}, {{member.country}}</p>
+                </div>
+                <div class="mb-2">
+                    <strong>Age:</strong>
+                    <p class="mb-0">{{member.age}}</p>
+                </div>
+                <div class="mb-2">
+                    <strong>Last Active:</strong>
+                    <p class="mb-0">{{member.lastActive | timeago}}</p>
+                </div>
+                <div class="mb-2">
+                    <strong>Member since:</strong>
+                    <p class="mb-0">{{member.created | date: 'dd MMM yyyy' }}</p>
+                </div>
+            </div>
+            <div class="card-footer bg-light border-0 p-3">
+                <button type="submit" [disabled]="!editForm.dirty" form="editForm"
+                        class="btn btn-success col-12 fw-semibold py-2 rounded-3">Save changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Edit Form Tabs -->
+    <div class="col-8">
+        <tabset class="member-tabset">
+            <tab heading="About {{member.knownAs}}">
+                <form #editForm="ngForm" id="editForm" (ngSubmit)="updateMember()" class="pt-3">
+                    
+                    <!-- AI Bio Generator Header & Tool -->
+                    <div class="d-flex justify-content-between align-items-center mt-2 mb-2">
+                        <h4 class="m-0">Description</h4>
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-primary rounded-pill shadow-sm fw-semibold" 
+                                (click)="isAiModalOpen = !isAiModalOpen">
+                            <i class="fa fa-magic me-1"></i> Polish with AI
+                        </button>
+                    </div>
+
+                    <!-- Collapsible AI Prompt Helper -->
+                    <div *ngIf="isAiModalOpen" class="card card-body bg-light border-primary-subtle mb-3 rounded-3 shadow-sm">
+                        <label class="form-label small text-muted fw-bold">Type a few rough keywords or bullet points:</label>
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   placeholder="e.g. software dev in Beirut, loves specialty coffee, plays tennis" 
+                                   [(ngModel)]="aiKeywords"
+                                   [ngModelOptions]="{standalone: true}">
+                            <button class="btn btn-primary fw-semibold" 
+                                    type="button" 
+                                    (click)="generateBioWithAi()" 
+                                    [disabled]="isGeneratingBio">
+                                <i class="fa fa-spinner fa-spin me-1" *ngIf="isGeneratingBio"></i>
+                                {{ isGeneratingBio ? 'Writing...' : 'Generate' }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <textarea class="form-control" 
+                              [(ngModel)]="member.introduction" 
+                              name="introduction"
+                              rows="5"></textarea>
+
+                    <h4 class="mt-4">Looking for</h4>
+                    <textarea class="form-control" 
+                              [(ngModel)]="member.lookingFor"
+                              name="lookingFor"
+                              rows="4"></textarea>
+
+                    <h4 class="mt-4">Interests</h4>
+                    <textarea class="form-control" 
+                              [(ngModel)]="member.interests" 
+                              name="interests"
+                              rows="4"></textarea>
+
+                    <h4 class="mt-4">Location Details:</h4>
+                    <div class="d-flex flex-row align-items-center mb-3">
+                        <label for="city" class="fw-bold me-2">City:</label>
+                        <input type="text" [(ngModel)]="member.city" name="city" class="form-control me-3">
+                        <label for="country" class="fw-bold me-2">Country:</label>
+                        <input type="text" [(ngModel)]="member.country" name="country" class="form-control me-3">
+                    </div>
+                </form>
+            </tab>
+
+            <tab heading="Edit Photos">
+                <app-photo-editor [member]="member"></app-photo-editor>
+            </tab>
+        </tabset>
+    </div>
+</div>

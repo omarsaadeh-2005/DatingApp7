@@ -1,0 +1,72 @@
+<nav class="navbar navbar-expand-md navbar-dark fixed-top custom-navbar shadow-sm">
+  <div class="container">
+    <a class="navbar-brand fw-bold d-flex align-items-center gap-2" routerLink="/" routerLinkActive="active">
+      <i class="bi bi-heart-fill text-danger"></i>
+      <span class="brand-text">Dating App</span>
+    </a>
+
+    <!-- Mobile Toggler Button (Ensures responsive scaling when minimized) -->
+    <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <ul class="navbar-nav me-auto mb-2 mb-md-0 gap-1">
+        <ng-container *ngIf="accountService.currentUser$ | async">
+          <li class="nav-item">
+            <a class="nav-link custom-nav-link" routerLink="/members" [routerLinkActiveOptions]="{exact: true}" routerLinkActive="active">
+              <i class="bi bi-people-fill me-1"></i> Matches
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link custom-nav-link" routerLink="/lists" routerLinkActive="active">
+              <i class="bi bi-bookmark-heart-fill me-1"></i> Lists
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link custom-nav-link" routerLink="/messages" routerLinkActive="active">
+              <i class="bi bi-chat-dots-fill me-1"></i> Messages
+            </a>
+          </li>
+          <li *appHasRole="['Admin','Moderator']" class="nav-item">
+            <a class="nav-link custom-nav-link" routerLink="/admin" routerLinkActive="active">
+              <i class="bi bi-shield-lock-fill me-1"></i> Admin
+            </a>
+          </li>
+        </ng-container>
+        <li class="nav-item">
+          <a class="nav-link custom-nav-link" routerLink="/errors" routerLinkActive="active">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> Errors
+          </a>
+        </li>
+      </ul>
+
+      <!-- User Profile Dropdown Pill -->
+      <div class="dropdown custom-user-dropdown" *ngIf="(accountService.currentUser$ | async) as user" dropdown>
+        <div class="user-chip d-flex align-items-center px-3 py-1 rounded-pill" dropdownToggle>
+          <img [src]="!user.photoUrl ? './assets/user.png' : user.photoUrl.startsWith('http') ? user.photoUrl : imageUrl + '/' + user.photoUrl" 
+               alt="user photo" 
+               class="user-avatar rounded-circle me-2">
+          <span class="text-light fw-medium">Welcome, <strong>{{user.knownAs}}</strong></span>
+          <i class="bi bi-chevron-down text-light ms-2 fs-7"></i>
+        </div>
+        <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 py-2" *dropdownMenu>
+          <a class="dropdown-item py-2 d-flex align-items-center gap-2" routerLink="/member/edit">
+            <i class="bi bi-person-gear"></i> Edit Profile
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger cursor-pointer" (click)="logout()">
+            <i class="bi bi-box-arrow-right"></i> Logout
+          </a>
+        </div>
+      </div>
+
+      <!-- Login Form (Desktop & Minimized Responsive) -->
+      <form *ngIf="!(accountService.currentUser$ | async)" #loginForm="ngForm" class="d-flex flex-column flex-md-row gap-2 mt-3 mt-md-0" (ngSubmit)="login()" autocomplete="off">
+        <input name="username" [(ngModel)]="model.username" class="form-control custom-input" type="text" placeholder="Username">
+        <input name="password" [(ngModel)]="model.password" class="form-control custom-input" type="password" placeholder="Password">
+        <button class="btn btn-gradient-login fw-semibold px-4" type="submit">Login</button>
+      </form>
+    </div>
+  </div>
+</nav>

@@ -1,0 +1,76 @@
+<form [formGroup]="registerForm" (ngSubmit)="registerForm.valid && register()" autocomplete="off">
+    <h2 class="text-center text-primary">Sign Up</h2>
+    <hr>
+<div class="mb-4 p-3 border rounded bg-light">
+        <label class="form-label fw-bold text-primary">⚡ AI Passport Verification & Autofill</label>
+        <p class="small text-muted mb-2">Upload or drop a photo of your passport. The AI will instantly read the text and verify that the layout/barcode zone is present and valid.</p>
+        
+        <input type="file" class="form-control" (change)="onPassportUpload($event)" accept="image/*">
+        
+        <div *ngIf="isProcessingPassport" class="mt-2 text-info small animate-pulse">
+            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+            Gemini is evaluating passport structure and extracting information...
+        </div>
+
+        <div *ngIf="benchmarkMetrics" class="mt-3 p-2 bg-white rounded border small">
+            <span class="fw-bold text-success d-block mb-1">⏱️ Processing Analytics:</span>
+            <ul class="list-unstyled mb-0 ps-1 text-dark">
+                <li>• Gemini 2.5 Flash Response Time: <strong>{{benchmarkMetrics.geminiExecutionTimeMs}}ms</strong></li>
+            </ul>
+        </div>
+    </div>
+    <hr>
+    <div class="mb-3">
+        <label style="margin-right:10px">I am a: </label>
+        <label class="form-check-label">
+            <input type="radio" class="form-check-input" value="male" formControlName="gender">Male
+        </label>
+        <label class="form-check-label">
+            <input type="radio" class="form-check-input ms-3" value="female" formControlName="gender">Female
+        </label>
+    </div>
+
+    <app-text-input [formControl]="$any(registerForm.controls['username'])" 
+        [label]="'Username'"></app-text-input>
+    <app-text-input [formControl]="$any(registerForm.controls['knownAs'])" 
+        [label]="'Known As'"></app-text-input>
+    <app-date-picker [formControl]="$any(registerForm.controls['dateOfBirth'])" 
+        [label]="'Date Of Birth'"[maxDate]="maxDate"></app-date-picker>
+    <div class="mb-3 text-start">
+        <label class="form-label fw-bold">Country</label>
+        <select class="form-select" formControlName="country">
+            <option value="" disabled selected>Select your country</option>
+            <option *ngFor="let country of countriesList" [value]="country.isoCode">
+                {{country.name}}
+            </option>
+        </select>
+    </div>
+
+    <div class="mb-3 text-start">
+        <label class="form-label fw-bold">City</label>
+        <select class="form-select" formControlName="city">
+            <option value="" disabled selected>Select your city</option>
+            <option *ngFor="let city of citiesList" [value]="city.name">
+                {{city.name}}
+            </option>
+        </select>
+    </div>
+    <app-text-input [formControl]="$any(registerForm.controls['password'])" 
+        [label]="'Password'" [type]="'password'">
+    </app-text-input>
+    <app-text-input [formControl]="$any(registerForm.controls['confirmPassword'])" 
+        [label]="'Confirm Password'" [type]="'password'"></app-text-input>
+
+        <div class="row" *ngIf="validationErrors">
+            <ul class="text-danger">
+                <li *ngFor="let error of validationErrors">
+                    {{error}}
+                </li>
+            </ul>
+        </div>
+
+    <div class="text-center">
+        <button [disabled]="!registerForm.valid" class="btn btn-success me-2" type="submit">Register</button>
+         <button class="btn btn-default" type="button" (click)="cancel()">Cancel</button>
+    </div>
+</form>

@@ -1,0 +1,39 @@
+import { ChangeDetectionStrategy, Component, Input, OnInit, ViewChild } from '@angular/core';
+import { Message } from 'src/app/_models/message';
+import { MessageService } from 'src/app/_services/message.service';
+import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
+import { environment } from 'src/environments/environment';
+import { TimeagoModule } from 'ngx-timeago';
+import { FormsModule, NgForm } from '@angular/forms';
+
+@Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-member-messages',
+  standalone: true,
+  imports: [BrowserAnimationsModule,TimeagoModule, FormsModule],
+  templateUrl: './member-messages.component.html',
+  styleUrl: './member-messages.component.css'
+})
+export class MemberMessagesComponent implements OnInit{
+  @ViewChild('messageForm')messageForm?: NgForm
+  @Input() username?: string;
+  imageUrl = environment.imageUrl;
+  messageContent='';
+  loading=false;
+  
+
+
+  constructor(public messageService: MessageService) { }
+
+  ngOnInit(): void {
+  }
+
+  sendMessage(){
+    if(!this.username) return;
+    this.loading=true;
+    this.messageService.sendMessage(this.username, this.messageContent).then(()=>{
+      this.messageForm?.reset();
+    }).finally(()=> this.loading=false)
+    }
+  }
+

@@ -1,0 +1,111 @@
+<!-- Page Header Badge -->
+<div class="text-center my-4">
+    <h2 class="fw-bold text-dark mb-1">Your Matches</h2>
+    <span class="badge bg-primary rounded-pill px-3 py-2 fs-6 shadow-sm">
+        <i class="fa fa-users me-1"></i> {{pagination?.totalItems || 0}} Matches Found
+    </span>
+</div>
+
+<!-- AI Feature 3: Natural Language Search Bar -->
+<div class="container mb-3">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+        <label class="form-label fw-bold text-primary small text-uppercase mb-2">
+            <i class="fa fa-magic me-1"></i> AI Matchmaker Natural Search
+        </label>
+        <div class="input-group">
+            <input type="text" 
+                   class="form-control rounded-start-3" 
+                   placeholder="e.g. Find someone in Beirut who loves specialty coffee and outdoor trips"
+                   [(ngModel)]="aiSearchQuery">
+            <button class="btn btn-primary px-4 fw-semibold rounded-end-3" (click)="filterWithAi()">
+                <i class="fa fa-search me-1"></i> Search with AI
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Control Bar -->
+<div class="container mb-4" *ngIf="userParams">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+        <form #form="ngForm" class="row g-3 align-items-center" (ngSubmit)="loadMembers()" autocomplete="off">
+            
+            <!-- Age Inputs -->
+            <div class="col-12 col-sm-6 col-md-auto d-flex align-items-center gap-2">
+                <label class="col-form-label fw-semibold text-muted text-nowrap">Age from:</label>
+                <input type="number" class="form-control custom-num-input" name="minAge" [(ngModel)]="userParams.minAge">
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-auto d-flex align-items-center gap-2">
+                <label class="col-form-label fw-semibold text-muted text-nowrap">Age to:</label>
+                <input type="number" class="form-control custom-num-input" name="maxAge" [(ngModel)]="userParams.maxAge">
+            </div>
+
+            <!-- Gender Select -->
+            <div class="col-12 col-sm-6 col-md-auto d-flex align-items-center gap-2">
+                <label class="col-form-label fw-semibold text-muted text-nowrap">Show:</label>
+                <select name="gender" class="form-select custom-select-input" [(ngModel)]="userParams.gender">
+                    <option *ngFor="let gender of genderList" [value]="gender.value">
+                        {{gender.display}}
+                    </option>
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="col-12 col-sm-6 col-md-auto d-flex gap-2">
+                <button class="btn btn-primary fw-semibold px-3 shadow-sm rounded-3" type="submit">
+                    <i class="fa fa-filter me-1"></i> Apply
+                </button>
+                <button (click)="resetFilters()" class="btn btn-outline-secondary fw-semibold px-3 rounded-3" type="button">
+                    <i class="fa fa-refresh me-1"></i> Reset
+                </button>
+            </div>
+
+            <!-- Order By Button Group -->
+            <div class="col-12 col-md d-flex justify-content-md-end mt-3 mt-md-0">
+                <div class="btn-group shadow-sm rounded-3 overflow-hidden" role="group">
+                    <button type="button" 
+                            class="btn" 
+                            [ngClass]="userParams.orderBy === 'lastActive' ? 'btn-primary' : 'btn-outline-primary'"
+                            name="orderBy" 
+                            [(ngModel)]="userParams.orderBy" 
+                            btnRadio="lastActive" 
+                            (click)="loadMembers()">
+                        <i class="fa fa-clock-o me-1"></i> Last Active
+                    </button>
+                    <button type="button" 
+                            class="btn" 
+                            [ngClass]="userParams.orderBy === 'created' ? 'btn-primary' : 'btn-outline-primary'"
+                            name="orderBy" 
+                            [(ngModel)]="userParams.orderBy" 
+                            btnRadio="created" 
+                            (click)="loadMembers()">
+                        <i class="fa fa-star me-1"></i> Newest
+                    </button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- Responsive Member Grid -->
+<div class="row g-4 px-2">
+    <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2" *ngFor="let member of members">
+        <app-member-card [member]="member"></app-member-card>
+    </div>
+</div>
+
+<!-- Centered Pagination -->
+<div class="d-flex justify-content-center my-5" *ngIf="pagination">
+    <pagination [boundaryLinks]="true" 
+                [totalItems]="pagination.totalItems"
+                [itemsPerPage]="pagination.itemsPerPage"
+                [maxSize]="10"
+                [(ngModel)]="pagination.currentPage"
+                (pageChanged)="pageChanged($event)"
+                previousText="&lsaquo;"
+                nextText="&rsaquo;"
+                firstText="&laquo;"
+                lastText="&raquo;">
+    </pagination>
+</div>

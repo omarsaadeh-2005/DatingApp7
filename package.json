@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "ngx-bootstrap": "^9.0.0",
+    "ngx-spinner": "^13.1.1",
+    "ngx-toastr": "^14.3.0"
+  }
+}

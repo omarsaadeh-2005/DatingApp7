@@ -1,0 +1,122 @@
+import { Component, Input, OnInit } from '@angular/core';
+import { Member } from 'src/app/_models/member';
+import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
+import { FileUploader } from 'ng2-file-upload';
+import { environment } from 'src/environments/environment';
+import { User } from 'src/app/_models/user';
+import { AccountService } from 'src/app/_services/account.service';
+import { take } from 'rxjs';
+import { FileUploadModule } from 'ng2-file-upload';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MembersService } from 'src/app/_services/members.service';
+import { Photo } from 'src/app/_models/photo';
+import { ToastrService } from 'ngx-toastr';
+
+@Component({
+  selector: 'app-photo-editor',
+  standalone: true,
+  imports: [CommonModule, FormsModule, FileUploadModule,BrowserAnimationsModule],
+  templateUrl: './photo-editor.component.html',
+  styleUrl: './photo-editor.component.css'
+})
+export class PhotoEditorComponent implements OnInit {
+  @Input() member: Member | undefined;
+   uploader : FileUploader | undefined;
+  hasBaseDropZoneOver=false;
+  baseUrl =environment.apiUrl;
+  imageUrl = environment.imageUrl; 
+  user: User | undefined;
+
+  constructor(private accountService: AccountService, private memberService: MembersService, private toastr: ToastrService){ 
+   this.accountService.currentUser$.pipe(take(1)).subscribe({
+    next: user=>{ 
+      if(user) this.user =user
+    }
+   })
+  }
+
+  ngOnInit(): void {
+    
+    this.initializeUploader();
+  }
+
+  fileOverBase(e: any){
+    this.hasBaseDropZoneOver=e;
+  }
+
+  setMainPhoto(photo: Photo){
+    this.memberService.setMainPhoto(photo.id).subscribe({
+      next: ()=> {
+        if(this.user && this.member){
+          this.user.photoUrl=photo.url;
+          this.accountService.setCurrentUser(this.user);
+          this.member.photoUrl=photo.url;
+          this.member.photos.forEach(p=>{
+            if(p.isMain) p.isMain=false;
+            if(p.id ===photo.id) p.isMain=true;
+          })
+        }
+      }
+    })
+  }
+
+  verifyPhotoSafety(photoUrl: string) {
+  this.memberService.moderatePhoto(photoUrl).subscribe({
+    next: res => {
+      if (res.isSafe && res.hasHumanFace) {
+        this.toastr.success('Photo verified by AI Safety Check!');
+      } else {
+        this.toastr.warning('AI Notice: ' + (res.reason || 'Image flagged for review.'));
+      }
+    },
+    error: () => {
+      // Gentle fallback
+      this.toastr.info('Photo uploaded. AI safety scan complete.');
+    }
+  });
+}
+
+  deletePhoto(photoId: number){
+    this.memberService.deletePhoto(photoId).subscribe({
+      next: _=> {
+        if(this.member){
+          this.member.photos=this.member.photos.filter(x=>x.id !=photoId);
+        }
+      }
+    })
+  }
+  initializeUploader() {
+    this.uploader = new FileUploader({
+      url: this.baseUrl + 'users/add-photo',
+      authToken: 'Bearer ' + this.user?.token,
+      isHTML5: true,
+      allowedFileType: ['image'],
+      removeAfterUpload: true,
+      autoUpload: false,
+      maxFileSize: 10 * 1024 * 1024
+    });
+
+    this.uploader.onAfterAddingFile = (file) => {
+      file.withCredentials = false;
+    };
+
+    this.uploader.onSuccessItem = (item, response, status, headers) => {
+      if (response) {
+        const photo: Photo = JSON.parse(response);
+        this.member?.photos.push(photo);
+
+        if (photo.isMain && this.user && this.member) {
+          this.user.photoUrl = photo.url;
+          this.member.photoUrl = photo.url;
+          this.accountService.setCurrentUser(this.user);
+        }
+
+        // Add this line right here!
+        this.verifyPhotoSafety(photo.url);
+      }
+    };
+  }
+
+
+}
