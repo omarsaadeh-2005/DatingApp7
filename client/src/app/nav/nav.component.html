@@ -1,41 +1,46 @@
 <nav class="navbar navbar-expand-md navbar-dark fixed-top custom-navbar shadow-sm">
   <div class="container">
-    <a class="navbar-brand fw-bold d-flex align-items-center gap-2" routerLink="/" routerLinkActive="active">
+    <a class="navbar-brand fw-bold d-flex align-items-center gap-2" routerLink="/" routerLinkActive="active" (click)="isCollapsed = true">
       <i class="bi bi-heart-fill text-danger"></i>
       <span class="brand-text">Dating App</span>
     </a>
 
-    <!-- Mobile Toggler Button (Ensures responsive scaling when minimized) -->
-    <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+    <!-- Mobile Toggler Button (Toggles Angular's isCollapsed property) -->
+    <button class="navbar-toggler border-0 shadow-none" 
+            type="button" 
+            (click)="isCollapsed = !isCollapsed" 
+            [attr.aria-expanded]="!isCollapsed" 
+            aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
 
-    <div class="collapse navbar-collapse" id="navbarCollapse">
+    <!-- Collapsible Container (Applies Bootstrap 'show' class dynamically) -->
+    <div class="collapse navbar-collapse" [class.show]="!isCollapsed" id="navbarCollapse">
       <ul class="navbar-nav me-auto mb-2 mb-md-0 gap-1">
         <ng-container *ngIf="accountService.currentUser$ | async">
           <li class="nav-item">
-            <a class="nav-link custom-nav-link" routerLink="/members" [routerLinkActiveOptions]="{exact: true}" routerLinkActive="active">
+            <a class="nav-link custom-nav-link" routerLink="/members" [routerLinkActiveOptions]="{exact: true}" routerLinkActive="active" (click)="isCollapsed = true">
               <i class="bi bi-people-fill me-1"></i> Matches
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link custom-nav-link" routerLink="/lists" routerLinkActive="active">
+            <a class="nav-link custom-nav-link" routerLink="/lists" routerLinkActive="active" (click)="isCollapsed = true">
               <i class="bi bi-bookmark-heart-fill me-1"></i> Lists
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link custom-nav-link" routerLink="/messages" routerLinkActive="active">
+            <a class="nav-link custom-nav-link" routerLink="/messages" routerLinkActive="active" (click)="isCollapsed = true">
               <i class="bi bi-chat-dots-fill me-1"></i> Messages
             </a>
           </li>
           <li *appHasRole="['Admin','Moderator']" class="nav-item">
-            <a class="nav-link custom-nav-link" routerLink="/admin" routerLinkActive="active">
+            <a class="nav-link custom-nav-link" routerLink="/admin" routerLinkActive="active" (click)="isCollapsed = true">
               <i class="bi bi-shield-lock-fill me-1"></i> Admin
             </a>
           </li>
         </ng-container>
         <li class="nav-item">
-          <a class="nav-link custom-nav-link" routerLink="/errors" routerLinkActive="active">
+          <a class="nav-link custom-nav-link" routerLink="/errors" routerLinkActive="active" (click)="isCollapsed = true">
             <i class="bi bi-exclamation-triangle-fill me-1"></i> Errors
           </a>
         </li>
@@ -43,7 +48,7 @@
 
       <!-- User Profile Dropdown Pill -->
       <div class="dropdown custom-user-dropdown" *ngIf="(accountService.currentUser$ | async) as user" dropdown>
-        <div class="user-chip d-flex align-items-center px-3 py-1 rounded-pill" dropdownToggle>
+        <div class="user-chip d-flex align-items-center px-3 py-1 rounded-pill cursor-pointer" dropdownToggle>
           <img [src]="!user.photoUrl ? './assets/user.png' : user.photoUrl.startsWith('http') ? user.photoUrl : imageUrl + '/' + user.photoUrl" 
                alt="user photo" 
                class="user-avatar rounded-circle me-2">
@@ -51,11 +56,11 @@
           <i class="bi bi-chevron-down text-light ms-2 fs-7"></i>
         </div>
         <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 py-2" *dropdownMenu>
-          <a class="dropdown-item py-2 d-flex align-items-center gap-2" routerLink="/member/edit">
+          <a class="dropdown-item py-2 d-flex align-items-center gap-2" routerLink="/member/edit" (click)="isCollapsed = true">
             <i class="bi bi-person-gear"></i> Edit Profile
           </a>
           <div class="dropdown-divider"></div>
-          <a class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger cursor-pointer" (click)="logout()">
+          <a class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger cursor-pointer" (click)="logout(); isCollapsed = true">
             <i class="bi bi-box-arrow-right"></i> Logout
           </a>
         </div>

@@ -14,6 +14,7 @@ import { UserParams } from '../_models/userParams';
 export class NavComponent implements OnInit {
   imageUrl = environment.imageUrl;
   model: any ={};
+  isCollapsed=true;
 
   constructor(public accountService: AccountService, private router: Router,
     private toastr:ToastrService) { }

@@ -1,17 +1,22 @@
-name: docker-push
+name: Deploy to Fly.io
 
 on:
   workflow_dispatch:
   push:
-      branches:
-        - 'main'
-env:=
+    branches:
+      - 'main'
+
+env:
   FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
 jobs:
   docker:
+    name: Build & Push Docker Image
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       
@@ -21,17 +26,24 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           
-      - name: Build and push
+      - name: Build and Push
         uses: docker/build-push-action@v3
         with:
-          context: "{{defaultContext}}:API"
+          context: ./API
+          file: ./API/Dockerfile
           push: true
           tags: omarsaadeh/datingapp:latest
+
   deploy:
     needs: docker
-    name: Deploy app
+    name: Deploy to Fly.io
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy App
+        run: flyctl deploy --remote-only
