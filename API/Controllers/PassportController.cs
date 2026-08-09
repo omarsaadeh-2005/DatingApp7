@@ -1,30 +1,28 @@
 using API.DTOs;
+using API.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using System.Text;
+using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace API.Controllers
 {
     public class PassportController : BaseApiController
     {
-        private readonly IConfiguration _config;
-        private readonly HttpClient _httpClient;
+        private readonly IAiService _aiService;
 
-        public PassportController(IConfiguration config)
+        public PassportController(IAiService aiService)
         {
-            _config = config;
-            _httpClient = new HttpClient();
+            _aiService = aiService;
         }
 
         [HttpPost("process-passport")]
-        public async Task<ActionResult<PassportDataDto>> ProcessPassport(IFormFile file, [FromForm] string validCitiesJson)
+        public async Task<ActionResult<PassportDataDto>> ProcessPassport(IFormFile file, [FromForm] string? validCitiesJson = null)
         {
             if (file == null || file.Length == 0) return BadRequest("No file uploaded.");
 
-            var geminiKey = _config["Gemini:ApiKey"];
-            if (string.IsNullOrEmpty(geminiKey)) 
-                return BadRequest("Gemini API key is missing from server configuration.");
+            Console.WriteLine($"[Passport Processing]: Starting upload for file '{file.FileName}'...");
 
             using var ms = new MemoryStream();
             await file.CopyToAsync(ms);
@@ -32,74 +30,148 @@ namespace API.Controllers
             var base64Image = Convert.ToBase64String(imageBytes);
 
             var metrics = new BenchmarkMetrics();
-            
-            // We inject the allowed cities list directly into Gemini's context instruction block
-            var systemPrompt = "Analyze the passport image. Verify if the barcode/MRZ visual area is clear, intact, and not cut out or altered. " +
-                               "Extract the following properties:\n" +
-                               "1. Username: extrapolate a clean username from the full name.\n" +
-                               "2. KnownAs: First name.\n" +
-                               "3. DateOfBirth: format strictly as YYYY-MM-DD.\n" +
-                               "4. Country: Return ONLY the 2-letter ISO country code in uppercase, e.g., 'LB' for Lebanon.\n" +
-                               "5. Gender: lowercase male or female.\n" +
-                               "6. City: Extract the city, but you MUST match it semantically to the closest string match inside this provided JSON array of valid dropdown options. " +
-                               $"For example, translate variations like 'Beyrouth' to 'Beirut' if 'Beirut' is in the array. Allowed Cities List: {validCitiesJson}\n\n" +
-                               "Return ONLY a raw JSON block matching these exact properties with no markdown styling:\n" +
-                               "{\"Username\":\"\",\"KnownAs\":\"\",\"DateOfBirth\":\"\",\"City\":\"\",\"Country\":\"\",\"Gender\":\"\",\"IsBarcodeValid\":true/false}";
+
+            var prompt = $@"Extract passport information accurately from the provided image.
+
+CRITICAL JSON SCHEMAS AND INSTRUCTIONS:
+1. DateOfBirth: Locate date of birth. Return strictly formatted as YYYY-MM-DD.
+2. City: Read the city/place of birth. Select closest match from allowed list: {validCitiesJson ?? "[]"}.
+3. Country: Return ONLY the 2-letter uppercase ISO country code (e.g. 'LB', 'FR', 'US').
+4. KnownAs: Given/First name.
+5. Username: Clean lowercase username without spaces.
+6. Gender: Strictly 'male' or 'female'.
+7. IsBarcodeValid: true if barcode or MRZ region is clear.
+
+Return ONLY a raw JSON object matching these exact property names:
+{{
+  ""Username"": """",
+  ""KnownAs"": """",
+  ""DateOfBirth"": """",
+  ""City"": """",
+  ""Country"": """",
+  ""Gender"": """",
+  ""IsBarcodeValid"": true
+}}";
 
             var stopwatch = Stopwatch.StartNew();
-            var geminiResponse = await CallGemini(base64Image, systemPrompt, geminiKey);
+            var aiResponse = await _aiService.ProcessImageAsync(base64Image, file.ContentType ?? "image/jpeg", prompt);
             stopwatch.Stop();
-            
+
             metrics.GeminiExecutionTimeMs = stopwatch.ElapsedMilliseconds;
 
-            if (string.IsNullOrEmpty(geminiResponse)) 
-                return BadRequest("Gemini failed to analyze or extract data from the passport image.");
+            Console.WriteLine($"[Passport Processing]: Raw AI Response:\n{aiResponse}");
+
+            if (string.IsNullOrWhiteSpace(aiResponse))
+            {
+                Console.WriteLine("[Passport Error]: AI Service returned an empty response.");
+                return BadRequest("AI failed to analyze image. Please check backend logs/settings.");
+            }
 
             try
             {
-                if (geminiResponse.Contains("```json"))
+                var cleanedJson = ExtractJsonBlock(aiResponse);
+
+                var options = new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true,
+                    AllowTrailingCommas = true
+                };
+
+                var parsedData = JsonSerializer.Deserialize<PassportDataDto>(cleanedJson, options) 
+                                 ?? new PassportDataDto();
+
+                // Post-Processing Safeguards
+                if (!string.IsNullOrWhiteSpace(parsedData.KnownAs))
                 {
-                    geminiResponse = geminiResponse.Split("```json")[1].Split("```")[0].Trim();
-                }
-                else if (geminiResponse.Contains("```"))
-                {
-                    geminiResponse = geminiResponse.Split("```")[1].Split("```")[0].Trim();
+                    var firstName = parsedData.KnownAs.Trim().Split(' ')[0];
+                    parsedData.KnownAs = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(firstName.ToLower());
                 }
 
-                var parsedData = JsonSerializer.Deserialize<PassportDataDto>(geminiResponse, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (!string.IsNullOrWhiteSpace(parsedData.DateOfBirth))
+                {
+                    parsedData.DateOfBirth = NormalizeDateToIso(parsedData.DateOfBirth);
+                }
+
+                if (!string.IsNullOrEmpty(parsedData.City) && !string.IsNullOrEmpty(validCitiesJson))
+                {
+                    parsedData.City = NormalizeCity(parsedData.City, validCitiesJson);
+                }
+
                 parsedData.Metrics = metrics;
-
                 return Ok(parsedData);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return BadRequest("AI response format was invalid. Please try a clearer picture.");
+                Console.WriteLine($"[Passport Exception]: {ex.Message}");
+                return BadRequest($"Failed to parse AI output: {ex.Message}");
             }
         }
 
-        private async Task<string> CallGemini(string base64Image, string prompt, string apiKey)
+        private static string ExtractJsonBlock(string input)
         {
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={apiKey}";
-            var requestBody = new
+            if (string.IsNullOrWhiteSpace(input)) return "{}";
+
+            var startIndex = input.IndexOf('{');
+            var endIndex = input.LastIndexOf('}');
+
+            if (startIndex >= 0 && endIndex > startIndex)
             {
-                contents = new[] {
-                    new { parts = new object[] {
-                        new { text = prompt },
-                        new { inline_data = new { mime_type = "image/jpeg", data = base64Image } }
-                    }}
-                }
+                return input.Substring(startIndex, endIndex - startIndex + 1);
+            }
+
+            return input.Trim();
+        }
+
+        private static string NormalizeDateToIso(string rawDate)
+        {
+            if (string.IsNullOrWhiteSpace(rawDate)) return string.Empty;
+            rawDate = rawDate.Trim();
+
+            if (DateTime.TryParse(rawDate, CultureInfo.GetCultureInfo("en-US"), DateTimeStyles.None, out var parsedDate))
+            {
+                return parsedDate.ToString("yyyy-MM-dd");
+            }
+
+            string[] formats = {
+                "yyyy-MM-dd", "yyyy/MM/dd", "dd/MM/yyyy", "dd-MM-yyyy", 
+                "dd MMM yyyy", "d MMMM yyyy", "dd MMMM yyyy", "yyyyMMdd", "yyMMdd"
             };
 
+            if (DateTime.TryParseExact(rawDate, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate))
+            {
+                return parsedDate.ToString("yyyy-MM-dd");
+            }
+
+            return rawDate;
+        }
+
+        private static string NormalizeCity(string extractedCity, string validCitiesJson)
+        {
             try
             {
-                var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
-                var response = await _httpClient.PostAsync(url, content);
-                if (!response.IsSuccessStatusCode) return "";
-                
-                var jsonDoc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-                return jsonDoc.RootElement.GetProperty("candidates")[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString();
+                var allowedCities = JsonSerializer.Deserialize<List<string>>(validCitiesJson);
+                if (allowedCities == null || !allowedCities.Any()) return extractedCity;
+
+                var match = allowedCities.FirstOrDefault(c => c.Equals(extractedCity, StringComparison.OrdinalIgnoreCase));
+                if (match != null) return match;
+
+                if (extractedCity.Contains("Beyrouth", StringComparison.OrdinalIgnoreCase) || 
+                    extractedCity.Contains("Bayrut", StringComparison.OrdinalIgnoreCase))
+                {
+                    match = allowedCities.FirstOrDefault(c => c.Equals("Beirut", StringComparison.OrdinalIgnoreCase));
+                    if (match != null) return match;
+                }
+
+                match = allowedCities.FirstOrDefault(c => 
+                    extractedCity.Contains(c, StringComparison.OrdinalIgnoreCase) || 
+                    c.Contains(extractedCity, StringComparison.OrdinalIgnoreCase));
+
+                return match ?? extractedCity;
             }
-            catch { return ""; }
+            catch
+            {
+                return extractedCity;
+            }
         }
     }
 }

@@ -14,7 +14,17 @@ builder.Services.AddControllers();
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddIdentityServices(builder.Configuration);
 builder.Services.AddScoped<PhotoService>();
+builder.Services.AddHttpClient<GeminiService>();
 builder.Services.AddHttpClient<OllamaService>();
+builder.Services.AddScoped<IAiService>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var provider = config["AiSettings:Provider"] ?? "Ollama";
+
+    return provider.Equals("Gemini", StringComparison.OrdinalIgnoreCase)
+        ? sp.GetRequiredService<GeminiService>()
+        : sp.GetRequiredService<OllamaService>();
+});
 
 var connString = "";
 if (builder.Environment.IsDevelopment()) 
